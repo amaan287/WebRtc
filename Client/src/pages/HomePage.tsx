@@ -1,22 +1,40 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { connect } from "http2";
-import { useEffect, useState } from "react";
+import { Textarea } from "@/components/ui/textarea";
+import { useEffect, useMemo, useState } from "react";
 import { io } from "socket.io-client";
+
 export default function HomePage() {
-  const socket = io(`http://localhost:3000`);
+  const socket = useMemo(() => {
+    return io(`http://localhost:3000`);
+  }, []);
   const [name, setName] = useState<string>("");
-  const [channel, setChannel] = useState<string>("");
+  const [room, setRoom] = useState<string>("");
+  const [message, setMessage] = useState<string>("");
+  const [receiveMessage, setReceiveMessage] = useState<string[] | string>([]);
+  const [socketId, setSocketId] = useState<string>("");
+  console.log(receiveMessage);
 
   useEffect(() => {
     socket.on("connect", () => {
       console.log("Connected to server", socket.id);
+      setSocketId(socket.id || "");
     });
-    socket.on("Connected to server", (data) => {
-      console.log(data);
-    });
-  });
 
+    socket.on("receive message", (message) => {
+      console.log(message);
+      setReceiveMessage(message);
+    });
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
+  function handleMessageSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    socket.emit("message", { message, room });
+    console.log(message, room);
+    setMessage("");
+  }
   const renderHelper = () => {
     return (
       <div className="flex items-center justify-center min-h-screen min-w-full">
@@ -28,22 +46,38 @@ export default function HomePage() {
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
-          <Input
-            type="text"
-            className="w-64"
-            placeholder="Enter channel name"
-            value={channel}
-            onChange={(e) => setChannel(e.target.value)}
-          />
           <Button className="w-32">Call</Button>
         </div>
       </div>
     );
   };
-
+  const Message = () => {
+    return (
+      <div>
+        <form onSubmit={handleMessageSubmit}>
+          <Input
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="enter a message"
+          />
+          <Input
+            type="text"
+            className="w-64"
+            placeholder="Enter room name"
+            value={room}
+            onChange={(e) => setRoom(e.target.value)}
+          />
+          <Textarea disabled value={receiveMessage} />
+          <Button type="submit">Send</Button>
+          <p>{socketId}</p>
+        </form>
+      </div>
+    );
+  };
   return (
     <div>
       <div>{renderHelper()}</div>
+      <div>{Message()}</div>
       <div>
         <video src=""></video>
       </div>

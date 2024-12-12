@@ -22,11 +22,16 @@ app.get('/', (req, res) => {
     res.send('Hello World');
 });
 io.on("connection", (socket) => {
-    console.log("user connected");
-    console.log("socket id", socket.id);
-    socket.emit("Connected to server", "Hello from server");
-
+    console.log("user connected", socket.id);
+    socket.on("message", ({ message, room }) => {
+        console.log(message);
+        socket.to(room).emit("receive message", message);
+    })
+    socket.on("disconnect", () => {
+        console.log("user disconnected", socket.id);
+    })
 })
+
 const PORT = process.env.PORT || 3000;
 const url = process.env.MONGOURI;
 mongoose.connect(url).then(() => {
